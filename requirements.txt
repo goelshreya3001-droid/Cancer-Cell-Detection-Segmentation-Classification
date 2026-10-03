@@ -23,3 +23,5 @@ Pillow>=10.0.0
 # All other packages (numpy, scipy, scikit-image, pillow, flask, werkzeug)
 # are already present in the base Anaconda environment on this machine.
 # Only torch, torchvision, and opencv-python needed to be installed separately.
+
+gunicorn>=21.2.0
