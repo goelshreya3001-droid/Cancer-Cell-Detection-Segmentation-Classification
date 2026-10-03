@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Analyze Image</h1>
+    <p class="page-subtitle">Upload a colorectal histopathology image for nuclei analysis</p>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form id="uploadForm">
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone__prompt">
+                    <span class="drop-zone__icon">📁</span>
+                    <p>Drag &amp; drop a histopathology image here</p>
+                    <p class="text-muted">or click to browse (PNG, JPG, TIFF, BMP)</p>
+                </div>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" hidden>
+
+            <div id="previewContainer" class="preview-container hidden">
+                <img id="imagePreview" class="image-preview" alt="Preview">
+                <button type="button" id="clearBtn" class="btn btn-outline clear-btn">✕ Clear</button>
+            </div>
+
+            <button type="submit" id="analyzeBtn" class="btn btn-primary btn-lg btn-full" disabled>🔬 Analyze Image</button>
+        </form>
+
+        <div id="loadingState" class="loading-state hidden">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">Running U-Net segmentation and CNN classification...</p>
+        </div>
+
+        <div id="uploadError" class="alert alert-danger hidden"></div>
+    </div>
+</div>
+{% endblock %}

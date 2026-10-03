@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-section">
+    <h1 class="hero-title">🔬 CoNSeP Nuclei Analysis</h1>
+    <p class="hero-subtitle">Cancer-Related Nuclei Detection, Segmentation &amp; Classification in Colorectal Histopathology Images</p>
+    <p class="hero-description">
+        This system performs automated nucleus segmentation using a U-Net convolutional neural network
+        and classification using a CNN trained on the CoNSeP (Colorectal Nuclear Segmentation and Phenotypes)
+        dataset. Upload colorectal histopathology image tiles and receive detailed nuclei counts across
+        five phenotype categories.
+    </p>
+    <div class="hero-buttons">
+        <a href="{{ url_for('ui.signup') }}" class="btn btn-primary btn-lg">Sign Up</a>
+        <a href="{{ url_for('ui.login') }}" class="btn btn-outline btn-lg">Login</a>
+    </div>
+</section>
+
+<section class="card" style="max-width:800px;margin:2rem auto;">
+    <div class="card-header"><h3>How It Works</h3></div>
+    <div class="card-body">
+        <div class="pipeline-flow">
+            <span class="pipeline-step">📷 Input Image</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-step">🎨 Preprocessing</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-step">🧠 U-Net Segmentation</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-step">🔍 Nuclei Extraction</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-step">📊 CNN Classification</span>
+            <span class="pipeline-arrow">→</span>
+            <span class="pipeline-step">📋 Results</span>
+        </div>
+    </div>
+</section>
+
+<div class="disclaimer-box">
+    <strong>Academic Disclaimer:</strong> This tool is for academic research purposes only and does not provide clinical diagnosis.
+</div>
+{% endblock %}

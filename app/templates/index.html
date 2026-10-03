@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pathology AI | Nuclei Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-content">
+            <h1>Pathology AI <span class="badge">Research Preview</span></h1>
+            <p>Cancer-Related Nuclei Detection &amp; Classification in Histopathology Images</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="main-grid">
+            <!-- Left Column: Upload & History -->
+            <div class="left-column">
+                <!-- Upload Section -->
+                <section class="card upload-section">
+                    <h2>New Analysis</h2>
+                    <p class="subtitle">Upload a histopathology image (H&amp;E stained) for automatic segmentation and multi-class phenotyping.</p>
+                    
+                    <form id="uploadForm">
+                        <div class="drop-zone" id="dropZone">
+                            <span class="drop-zone__prompt">Drag &amp; drop an image here or click to browse</span>
+                            <input type="file" name="image" id="fileInput" class="drop-zone__input" accept="image/png, image/jpeg, image/tif, image/tiff, image/bmp">
+                        </div>
+                        <div id="previewContainer" class="hidden">
+                            <img id="imagePreview" alt="Image Preview" class="img-preview">
+                            <button type="button" id="clearBtn" class="btn btn-secondary">Clear</button>
+                        </div>
+                        <button type="submit" id="analyzeBtn" class="btn btn-primary" disabled>Run Analysis</button>
+                    </form>
+
+                    <!-- Error Alert -->
+                    <div id="errorAlert" class="alert alert-danger hidden"></div>
+                </section>
+
+                <!-- History Section -->
+                <section class="card history-section">
+                    <h2>Recent Analyses</h2>
+                    <div id="historyList" class="history-list">
+                        <p class="text-muted">Loading history...</p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Results & Loading -->
+            <div class="right-column">
+                <!-- Loading State -->
+                <div id="loadingState" class="card loading-card hidden">
+                    <div class="spinner"></div>
+                    <h3>Processing Image...</h3>
+                    <p>Running Macenko normalization, U-Net segmentation, and CNN classification.</p>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="card results-card hidden">
+                    <h2>Analysis Results</h2>
+                    <div class="disclaimer">
+                        <strong>Note:</strong> This tool is for academic research purposes only and does not provide clinical diagnosis.
+                    </div>
+                    
+                    <!-- Metrics Grid -->
+                    <div class="metrics-grid">
+                        <div class="metric-card highlight-danger">
+                            <span class="metric-label">Malignant/Dysplastic Nuclei</span>
+                            <span class="metric-value" id="valMalignant">0</span>
+                        </div>
+                        <div class="metric-card highlight-info">
+                            <span class="metric-label">Total Nuclei Detected</span>
+                            <span class="metric-value" id="valTotal">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Inflammatory</span>
+                            <span class="metric-value" id="valInflammatory">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Healthy Epithelial</span>
+                            <span class="metric-value" id="valHealthy">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Stromal</span>
+                            <span class="metric-value" id="valStromal">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Other/Misc</span>
+                            <span class="metric-value" id="valOther">0</span>
+                        </div>
+                    </div>
+                    <div class="processing-time text-muted">
+                        Processing time: <span id="valTime">0.0</span> seconds
+                    </div>
+
+                    <!-- Images -->
+                    <div class="images-container">
+                        <div class="image-box">
+                            <h4>Original Image</h4>
+                            <img id="resOriginal" src="" alt="Original Upload">
+                        </div>
+                        <div class="image-box">
+                            <h4>Segmentation Mask</h4>
+                            <img id="resMask" src="" alt="U-Net Mask">
+                        </div>
+                        <div class="image-box full-width">
+                            <h4>Nuclei Phenotype Overlay</h4>
+                            <img id="resOverlay" src="" alt="Classification Overlay">
+                            <div class="legend">
+                                <span class="legend-item"><span class="color-box" style="background-color: rgb(220, 0, 0);"></span> Malignant</span>
+                                <span class="legend-item"><span class="color-box" style="background-color: rgb(50, 200, 0);"></span> Healthy</span>
+                                <span class="legend-item"><span class="color-box" style="background-color: rgb(0, 100, 200);"></span> Inflammatory</span>
+                                <span class="legend-item"><span class="color-box" style="background-color: rgb(220, 200, 0);"></span> Stromal</span>
+                                <span class="legend-item"><span class="color-box" style="background-color: rgb(128, 128, 128);"></span> Other</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

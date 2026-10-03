@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Welcome back, {{ session.username }}</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card stat-card--primary">
+        <div class="stat-value" id="statTotalAnalyses">–</div>
+        <div class="stat-label">Total Analyses</div>
+    </div>
+    <div class="stat-card stat-card--danger">
+        <div class="stat-value" id="statMalignant">–</div>
+        <div class="stat-label">Malignant Nuclei Detected</div>
+    </div>
+    <div class="stat-card stat-card--info">
+        <div class="stat-value" id="statTotalNuclei">–</div>
+        <div class="stat-label">Total Nuclei Analyzed</div>
+    </div>
+</div>
+
+<div class="quick-actions">
+    <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary btn-lg">🔬 New Analysis</a>
+    <a href="{{ url_for('ui.history_page') }}" class="btn btn-outline">📋 View History</a>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3>Recent Analyses</h3></div>
+    <div class="card-body">
+        <div id="recentAnalyses">
+            <div class="empty-state">No analyses yet. Start by uploading an image.</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="resultsLoading" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p class="loading-text">Loading analysis results...</p>
+</div>
+
+<div id="resultsError" class="alert alert-danger hidden"></div>
+
+<div id="resultsContent" class="hidden">
+    <div class="page-header">
+        <h1 class="page-title">Analysis Results</h1>
+    </div>
+
+    <div class="metrics-grid">
+        <div class="metric-card metric-card--primary">
+            <div class="metric-value" id="resTotal">–</div>
+            <div class="metric-label">Total Nuclei</div>
+        </div>
+        <div class="metric-card metric-card--danger">
+            <div class="metric-value" id="resMalignant">–</div>
+            <div class="metric-label">Malignant / Dysplastic</div>
+        </div>
+        <div class="metric-card metric-card--warning">
+            <div class="metric-value" id="resInflammatory">–</div>
+            <div class="metric-label">Inflammatory</div>
+        </div>
+        <div class="metric-card metric-card--success">
+            <div class="metric-value" id="resHealthy">–</div>
+            <div class="metric-label">Healthy Epithelial</div>
+        </div>
+        <div class="metric-card metric-card--info">
+            <div class="metric-value" id="resStromal">–</div>
+            <div class="metric-label">Stromal</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value" id="resOther">–</div>
+            <div class="metric-label">Other</div>
+        </div>
+    </div>
+
+    <p class="text-muted text-center" id="resTime">Processing time: –</p>
+
+    <div class="results-grid">
+        <div class="result-image-card">
+            <h3>Original Image</h3>
+            <img id="resOrigImg" class="result-img" alt="Original">
+        </div>
+        <div class="result-image-card">
+            <h3>Segmentation Mask</h3>
+            <img id="resMaskImg" class="result-img" alt="Mask">
+        </div>
+    </div>
+
+    <div class="result-image-card result-image-card--full">
+        <h3>Classification Overlay</h3>
+        <img id="resOverlayImg" class="result-img" alt="Overlay">
+        <div class="legend">
+            <div class="legend-row"><span class="legend-dot" style="background:#e74c3c;"></span><span class="legend-label">Malignant / Dysplastic</span></div>
+            <div class="legend-row"><span class="legend-dot" style="background:#3498db;"></span><span class="legend-label">Inflammatory</span></div>
+            <div class="legend-row"><span class="legend-dot" style="background:#2ecc71;"></span><span class="legend-label">Healthy Epithelial</span></div>
+            <div class="legend-row"><span class="legend-dot" style="background:#e67e22;"></span><span class="legend-label">Stromal</span></div>
+            <div class="legend-row"><span class="legend-dot" style="background:#95a5a6;"></span><span class="legend-label">Other</span></div>
+        </div>
+    </div>
+
+    <div class="disclaimer-box">
+        <strong>Note:</strong> Malignant/Dysplastic nuclei identified according to CoNSeP dataset annotations. This is not a clinical diagnosis.
+    </div>
+
+    <div class="quick-actions">
+        <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary">🔬 New Analysis</a>
+        <a href="{{ url_for('ui.history_page') }}" class="btn btn-outline">📋 View History</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>window.ANALYSIS_ID = {{ analysis_id }};</script>
+{% endblock %}

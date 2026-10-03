@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">About This Project</h1>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3>Project Overview</h3></div>
+    <div class="card-body">
+        <p>This web application performs automated detection, segmentation, and classification of
+        cancer-related nuclei in colorectal histopathology images. It was developed as an academic
+        research project to demonstrate a complete deep learning pipeline from image input to
+        phenotype-level nuclei classification.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3>Methodology</h3></div>
+    <div class="card-body methodology-section">
+        <div class="pipeline-flow">
+            <div class="pipeline-step">📷 Input Histopathology Image</div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">🎨 Macenko Stain Normalization</div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">🧠 U-Net Nuclei Segmentation</div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">🔍 Watershed Instance Separation</div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">📊 CNN Nuclei Classification</div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">⚠️ Malignant/Dysplastic Highlighting</div>
+            <div class="pipeline-arrow">↓</div>
+            <div class="pipeline-step">📋 Counting &amp; Results</div>
+        </div>
+
+        <p style="margin-top:1.5rem;">The segmentation stage uses a <strong>U-Net</strong> convolutional neural network
+        to generate a binary nuclei mask from the input histopathology tile.</p>
+        <p>Individual nuclei are extracted using <strong>watershed-based instance separation</strong>.</p>
+        <p>Each extracted nucleus (32×32 crop) is classified into one of five categories using a
+        <strong>CNN classifier</strong> trained on the CoNSeP dataset:
+        Malignant/Dysplastic, Inflammatory, Healthy Epithelial, Stromal, or Other.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3>Technology Stack</h3></div>
+    <div class="card-body">
+        <div class="tech-grid">
+            <div class="tech-card"><div class="tech-icon">🧠</div><div class="tech-name">PyTorch</div></div>
+            <div class="tech-card"><div class="tech-icon">🔬</div><div class="tech-name">U-Net</div></div>
+            <div class="tech-card"><div class="tech-icon">📊</div><div class="tech-name">CNN Classifier</div></div>
+            <div class="tech-card"><div class="tech-icon">🌐</div><div class="tech-name">Flask</div></div>
+            <div class="tech-card"><div class="tech-icon">💾</div><div class="tech-name">SQLite</div></div>
+            <div class="tech-card"><div class="tech-icon">📋</div><div class="tech-name">CoNSeP Dataset</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="disclaimer-box">
+    <strong>Disclaimer:</strong> This tool is designed for academic and educational purposes.
+    The U-Net and CNN architectures used are standard implementations and are not claimed as
+    novel contributions. This system does not provide clinical diagnostic capability.
+</div>
+{% endblock %}

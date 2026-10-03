@@ -1,0 +1,25 @@
+# Cancer Nuclei Detection — Web Application Requirements
+# Install with:  pip install -r requirements.txt
+
+# ── ML stack ──────────────────────────────────────────────────────────────
+torch>=2.0.0
+torchvision>=0.15.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-image>=0.20.0
+
+# ── Web framework ──────────────────────────────────────────────────────────
+Flask>=3.0.0
+Werkzeug>=3.0.0
+
+# ── Image handling ─────────────────────────────────────────────────────────
+Pillow>=10.0.0
+
+# ── Database ───────────────────────────────────────────────────────────────
+# sqlite3 is part of the Python standard library — no install needed.
+
+# ── Notes ──────────────────────────────────────────────────────────────────
+# All other packages (numpy, scipy, scikit-image, pillow, flask, werkzeug)
+# are already present in the base Anaconda environment on this machine.
+# Only torch, torchvision, and opencv-python needed to be installed separately.

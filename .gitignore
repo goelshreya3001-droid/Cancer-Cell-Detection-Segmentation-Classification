@@ -3,4 +3,26 @@ archive.zip
 dataset/
 consep_data/
 __pycache__/
+*.pyc# Python
+__pycache__/
 *.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# Local database
+pathology.db
+
+# Generated test images
+consep_patch_extracted.png
+nb01_*.png
+nb03_*.png
+real_*.png
+real_*.jpg
+
+# Test assets
+test_assets/
+
+# Flask generated files
+app/static/uploads/*
+app/static/results/*

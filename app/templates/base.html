@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoNSeP - Colorectal Cancer Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <h1>🔬 CoNSeP Analysis</h1>
+            <nav class="main-nav">
+                <a href="{{ url_for('ui.about') }}">About</a>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('ui.dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('ui.analyze') }}">Analyze</a>
+                    <a href="{{ url_for('ui.history_page') }}">History</a>
+                    <a href="{{ url_for('ui.profile') }}">Profile</a>
+                    <a href="#" id="logoutBtn" class="btn btn-outline">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('ui.login') }}">Login</a>
+                    <a href="{{ url_for('ui.signup') }}" class="btn btn-primary">Sign Up</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Error Alert Container -->
+        <div id="globalErrorAlert" class="alert alert-danger hidden"></div>
+        <div id="globalSuccessAlert" class="alert alert-success hidden"></div>
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="app-footer">
+        <p>This tool is for academic research purposes only and does not provide clinical diagnosis.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
