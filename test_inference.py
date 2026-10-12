@@ -164,7 +164,7 @@ def main() -> None:
     from app.ml.inference import run_inference
     result = run_inference(
         image_path=test_img_path,
-        apply_stain_normalization=True,
+        apply_stain_normalization=False,
         save_overlay_path=overlay_path,
         save_mask_path=mask_path,
     )
@@ -172,7 +172,7 @@ def main() -> None:
     # Report
     print()
     print("=" * 65)
-    print("  INFERENCE RESULTS")
+    print("  INFERENCE RESULTS (Synthetic Slide)")
     print("=" * 65)
     print(f"  Processing time        : {result['processing_time_sec']:.2f} s")
     print(f"  Total nuclei detected  : {result['total_nuclei']}")
@@ -195,11 +195,33 @@ def main() -> None:
 
     if result["total_nuclei"] == 0:
         print("  [NOTE] No nuclei detected on the synthetic image.")
-        print("         This is expected behaviour - the U-Net was trained on real CoNSeP")
-        print("         patches, so it may not respond to synthetic images. The pipeline")
-        print("         is fully operational; it will work correctly on real H&E slides.")
     else:
         print(f"  [OK]  {result['total_nuclei']} nuclei detected and classified successfully.")
+
+    # Smoke test on real CoNSeP slide if present
+    real_slide_path = os.path.join(PROJECT_ROOT, "real_consep_he.png")
+    if os.path.exists(real_slide_path):
+        print("\n" + "=" * 65)
+        print("  INFERENCE SMOKE TEST (real_consep_he.png)")
+        print("=" * 65)
+        print("  [NOTE] This is an inference pipeline smoke test on a sample H&E patch.")
+        print("         It verifies that the pipeline runs end-to-end on real histology")
+        print("         tissue without errors and segments candidate nuclei.")
+        print("         It does NOT validate diagnostic or classification accuracy.")
+        print("         Evaluating accuracy requires ground-truth annotations and")
+        print("         formal benchmark metric comparisons (e.g. Dice, IoU, F1 score).")
+        print()
+        res_real = run_inference(image_path=real_slide_path, apply_stain_normalization=False)
+        print(f"  Processing time        : {res_real['processing_time_sec']:.2f} s")
+        print(f"  Total nuclei detected  : {res_real['total_nuclei']}")
+        print(f"  Healthy Epithelial (c2): {res_real['healthy_count']}")
+        print(f"  Malignant (c3)         : {res_real['malignant_count']}")
+        print(f"  Inflammatory (c1)      : {res_real['inflammatory_count']}")
+        print(f"  Stromal (c4)           : {res_real['stromal_count']}")
+        print(f"  Other (c0)             : {res_real['other_count']}")
+        assert res_real["total_nuclei"] > 0, "Expected nuclei candidates to be detected on real slide"
+        assert res_real["overlay_image"] is not None and res_real["mask_image"] is not None, "Outputs missing"
+        print("  [OK]  Inference smoke test completed successfully.")
 
     print("=" * 65)
     print("  Stage 1 COMPLETE - inference pipeline is operational.")

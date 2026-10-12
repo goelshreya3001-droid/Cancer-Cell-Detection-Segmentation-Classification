@@ -62,14 +62,18 @@ CLASS_COLORS_BGR = {
     4: (0,   200, 220),   # Yellow — Stromal
 }
 
-# Processing constants — must match notebook values
+# Processing constants — tuned to match 05_final_Pipeline.ipynb
 PATCH_SIZE    = 256   # U-Net input tile size
 STRIDE        = 128   # Sliding-window stride for large images
-UNET_THRESH   = 0.5   # Binary mask threshold
-MIN_DISTANCE  = 7     # Watershed: min distance between nucleus peaks
-MIN_AREA      = 30    # Watershed: minimum nucleus area in pixels
+UNET_THRESH   = 0.45  # Optimal binary mask cutoff threshold
+MIN_DISTANCE  = 6     # Watershed: min distance between nucleus peaks
+MIN_AREA      = 25    # Watershed: minimum nucleus area in pixels
 CROP_SIZE     = 32    # CNN input: nucleus crop size
-CROP_PADDING  = 4     # Padding around each nucleus bounding box
+CROP_PADDING  = 2     # Padding around each nucleus bounding box
+
+# ImageNet normalization statistics used by NucleiClassifier in 05_final_Pipeline.ipynb
+IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+IMAGENET_STD  = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 # ---------------------------------------------------------------------------
 # Singleton model state
@@ -246,7 +250,11 @@ def _separate_nuclei(
         y_min, y_max = int(np.min(coords[0])), int(np.max(coords[0]))
         x_min, x_max = int(np.min(coords[1])), int(np.max(coords[1]))
 
-        # 4px padding (source: 03_evaluate_unet.ipynb)
+        # Skip degenerate tiny instances
+        if (y_max - y_min) < 4 or (x_max - x_min) < 4:
+            continue
+
+        # Padding (source: 05_final_Pipeline.ipynb)
         y_pad_min = max(0, y_min - CROP_PADDING)
         y_pad_max = min(h, y_max + CROP_PADDING)
         x_pad_min = max(0, x_min - CROP_PADDING)
@@ -256,9 +264,9 @@ def _separate_nuclei(
         if crop.size == 0:
             continue
 
-        # Resize to 32×32 and normalise — source: 04_nuclei_classification.ipynb
-        crop_resized = cv2.resize(crop, (CROP_SIZE, CROP_SIZE))
-        crop_norm = crop_resized.astype(np.float32) / 255.0
+        # Resize to 32×32 and normalise with ImageNet stats — source: 05_final_Pipeline.ipynb
+        crop_resized = cv2.resize(crop, (CROP_SIZE, CROP_SIZE)).astype(np.float32) / 255.0
+        crop_norm = (crop_resized - IMAGENET_MEAN) / IMAGENET_STD
         crop_tensor = torch.tensor(
             crop_norm.transpose(2, 0, 1), dtype=torch.float32
         )  # (3, 32, 32)
@@ -348,7 +356,7 @@ def _draw_overlay(
 
 def run_inference(
     image_path: str,
-    apply_stain_normalization: bool = True,
+    apply_stain_normalization: bool = False,
     save_overlay_path: str | None = None,
     save_mask_path: str | None = None,
 ) -> dict:
@@ -357,15 +365,15 @@ def run_inference(
 
     Pipeline:
         Input image
-        → Macenko stain normalization (optional but recommended)
-        → U-Net sliding-window segmentation → binary nuclei mask
-        → Watershed instance separation → individual nucleus crops
-        → NucleiClassifier (batched) → per-nucleus class IDs
+        → U-Net sliding-window segmentation → binary nuclei mask (cutoff 0.45)
+        → Watershed instance separation → individual nucleus crops (32x32)
+        → ImageNet normalization + NucleiClassifier (batched) → per-nucleus class IDs
         → Colored overlay image + aggregate counts
 
     Args:
         image_path:               Absolute or relative path to the input image.
-        apply_stain_normalization: Whether to run Macenko normalization first.
+        apply_stain_normalization: Whether to run Macenko normalization first (default False,
+                                  matching 05_final_Pipeline.ipynb to prevent H&E stain loss).
         save_overlay_path:        If given, saves overlay image to this path.
         save_mask_path:           If given, saves binary mask image to this path.
 

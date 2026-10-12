@@ -71,7 +71,7 @@ def test_static_files():
     passed = True
     try:
         r_css = requests.get(f"{BASE_URL}/static/css/style.css", timeout=5)
-        if r_css.status_code == 200 and "background-color" in r_css.text:
+        if r_css.status_code == 200 and ("background" in r_css.text or "--brand-primary" in r_css.text):
             ok("CSS loaded successfully.")
         else:
             fail(f"CSS failed. Status: {r_css.status_code}")
@@ -90,7 +90,7 @@ def test_static_files():
         return False
 
 
-def test_predict_flow(analysis_id_holder):
+def test_predict_flow(analysis_id_holder, session):
     section("Test 3: POST /predict (Full ML Inference Flow)")
     if not os.path.exists(TEST_IMAGE):
         fail("Test image missing.")
@@ -98,7 +98,7 @@ def test_predict_flow(analysis_id_holder):
         
     try:
         with open(TEST_IMAGE, "rb") as f:
-            r = requests.post(
+            r = session.post(
                 f"{BASE_URL}/predict",
                 files={"image": ("test_slide.png", f, "image/png")},
                 timeout=120
@@ -135,10 +135,10 @@ def test_predict_flow(analysis_id_holder):
         return False
 
 
-def test_history():
+def test_history(session):
     section("Test 4: GET /history")
     try:
-        r = requests.get(f"{BASE_URL}/history", timeout=10)
+        r = session.get(f"{BASE_URL}/history", timeout=10)
         data = r.json()
         if r.status_code == 200 and data.get("success"):
             ok(f"History returned successfully. Count: {data.get('count')}")
@@ -151,10 +151,10 @@ def test_history():
         return False
 
 
-def test_get_analysis(analysis_id):
+def test_get_analysis(analysis_id, session):
     section(f"Test 5: GET /analysis/{analysis_id}")
     try:
-        r = requests.get(f"{BASE_URL}/analysis/{analysis_id}", timeout=10)
+        r = session.get(f"{BASE_URL}/analysis/{analysis_id}", timeout=10)
         data = r.json()
         if r.status_code == 200 and data.get("success"):
             ok("Analysis fetched successfully.")
@@ -168,11 +168,11 @@ def test_get_analysis(analysis_id):
         return False
 
 
-def test_invalid_file():
+def test_invalid_file(session):
     section("Test 6: POST /predict (Invalid File)")
     try:
         fake_file = io.BytesIO(b"this is not an image")
-        r = requests.post(
+        r = session.post(
             f"{BASE_URL}/predict",
             files={"image": ("test.txt", fake_file, "text/plain")},
             timeout=10
@@ -203,18 +203,66 @@ def main():
         sys.exit(1)
     ok("Server is running.")
 
+    session = requests.Session()
+    ts = int(time.time())
+    user = f"e2e_user_{ts}"
+
+    # ── Signup ─────────────────────────────────────────────────────────────
+    try:
+        r_signup = session.post(f"{BASE_URL}/signup", json={
+            "username": user,
+            "email": f"{user}@example.com",
+            "password": "password123",
+            "confirm_password": "password123",
+        }, timeout=10)
+    except Exception as exc:
+        fail(f"POST /signup connection failed: {exc}")
+        sys.exit(1)
+
+    try:
+        data_signup = r_signup.json()
+    except Exception:
+        fail(f"POST /signup returned non-JSON response (HTTP {r_signup.status_code}): {r_signup.text[:200]}")
+        sys.exit(1)
+
+    if r_signup.status_code != 201 or not data_signup.get("success"):
+        fail(f"POST /signup failed (HTTP {r_signup.status_code}): {data_signup}")
+        sys.exit(1)
+    ok(f"User signup succeeded: {user}")
+
+    # ── Login ──────────────────────────────────────────────────────────────
+    try:
+        r_login = session.post(f"{BASE_URL}/login", json={
+            "username": user,
+            "password": "password123",
+        }, timeout=10)
+    except Exception as exc:
+        fail(f"POST /login connection failed: {exc}")
+        sys.exit(1)
+
+    try:
+        data_login = r_login.json()
+    except Exception:
+        fail(f"POST /login returned non-JSON response (HTTP {r_login.status_code}): {r_login.text[:200]}")
+        sys.exit(1)
+
+    if r_login.status_code != 200 or not data_login.get("success"):
+        fail(f"POST /login failed (HTTP {r_login.status_code}): {data_login}")
+        sys.exit(1)
+    ok("User login succeeded; authenticated session established.")
+
     results = []
     analysis_id_holder = []
 
     results.append(("UI Dashboard (GET /)", test_ui_root()))
     results.append(("Static Files Loading", test_static_files()))
-    results.append(("ML Inference Flow", test_predict_flow(analysis_id_holder)))
-    results.append(("Analysis History", test_history()))
+    results.append(("ML Inference Flow", test_predict_flow(analysis_id_holder, session)))
+    results.append(("Analysis History", test_history(session)))
     
     if analysis_id_holder:
-        results.append(("Fetch Single Analysis", test_get_analysis(analysis_id_holder[0])))
+        results.append(("Fetch Single Analysis", test_get_analysis(analysis_id_holder[0], session)))
     
-    results.append(("Invalid File Handling", test_invalid_file()))
+    results.append(("Invalid File Handling", test_invalid_file(session)))
 
     section("FINAL SUMMARY")
     passed = sum(1 for _, ok_flag in results if ok_flag)

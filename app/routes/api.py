@@ -133,10 +133,11 @@ def predict():
     mask_path    = os.path.join(results_dir, f"{job_id}_mask.png")
 
     # ── 4. Run ML inference ───────────────────────────────────────────────
+    stain_norm = request.form.get("stain_norm", "false").lower() in ("true", "1")
     try:
         result = run_inference(
             image_path=upload_path,
-            apply_stain_normalization=True,
+            apply_stain_normalization=stain_norm,
             save_overlay_path=overlay_path,
             save_mask_path=mask_path,
         )
