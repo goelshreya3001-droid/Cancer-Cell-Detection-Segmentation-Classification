@@ -1,36 +1,88 @@
 {% extends "base.html" %}
+{% block title %}Dashboard — PathAI{% endblock %}
 {% block content %}
+
 <div class="page-header">
-    <h1 class="page-title">Dashboard</h1>
-    <p class="page-subtitle">Welcome back, {{ session.username }}</p>
+    <div class="page-header-left">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Welcome back, <strong>{{ session.username }}</strong></p>
+    </div>
+    <div>
+        <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+            <span>New Analysis</span>
+        </a>
+    </div>
 </div>
 
+<!-- ── Stats ───────────────────────────────────────────────────── -->
 <div class="stats-grid">
     <div class="stat-card stat-card--primary">
-        <div class="stat-value" id="statTotalAnalyses">–</div>
-        <div class="stat-label">Total Analyses</div>
+        <div class="stat-card-accent"></div>
+        <div class="stat-header">
+            <div>
+                <div class="stat-value" id="statTotalAnalyses">–</div>
+                <div class="stat-label">Total Analyses</div>
+            </div>
+            <div class="stat-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+        </div>
     </div>
+
     <div class="stat-card stat-card--danger">
-        <div class="stat-value" id="statMalignant">–</div>
-        <div class="stat-label">Malignant Nuclei Detected</div>
+        <div class="stat-card-accent"></div>
+        <div class="stat-header">
+            <div>
+                <div class="stat-value" id="statMalignant">–</div>
+                <div class="stat-label">Malignant Nuclei</div>
+            </div>
+            <div class="stat-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+        </div>
     </div>
+
     <div class="stat-card stat-card--info">
-        <div class="stat-value" id="statTotalNuclei">–</div>
-        <div class="stat-label">Total Nuclei Analyzed</div>
-    </div>
-</div>
-
-<div class="quick-actions">
-    <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary btn-lg">🔬 New Analysis</a>
-    <a href="{{ url_for('ui.history_page') }}" class="btn btn-outline">📋 View History</a>
-</div>
-
-<div class="card">
-    <div class="card-header"><h3>Recent Analyses</h3></div>
-    <div class="card-body">
-        <div id="recentAnalyses">
-            <div class="empty-state">No analyses yet. Start by uploading an image.</div>
+        <div class="stat-card-accent"></div>
+        <div class="stat-header">
+            <div>
+                <div class="stat-value" id="statTotalNuclei">–</div>
+                <div class="stat-label">Total Nuclei Analysed</div>
+            </div>
+            <div class="stat-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>
+            </div>
         </div>
     </div>
 </div>
+
+<!-- ── Quick actions ──────────────────────────────────────────── -->
+<div class="quick-actions">
+    <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>Analyse Image</span>
+    </a>
+    <a href="{{ url_for('ui.history_page') }}" class="btn btn-ghost">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+        <span>View Full History</span>
+    </a>
+</div>
+
+<!-- ── Recent analyses ────────────────────────────────────────── -->
+<div class="card">
+    <div class="card-header">
+        <h3>Recent Analyses</h3>
+        <a href="{{ url_for('ui.history_page') }}" class="btn btn-ghost btn-sm">View all</a>
+    </div>
+    <div class="card-body" style="padding: 0.5rem 0;">
+        <div id="recentAnalyses" style="padding: 0 1.375rem;">
+            <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Loading recent analyses…</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}

@@ -201,3 +201,15 @@ def get_user_by_username(username: str) -> sqlite3.Row | None:
     return db.execute(
         "SELECT * FROM users WHERE username = ?", (username,)
     ).fetchone()
+
+
+def get_user_by_email(email: str) -> sqlite3.Row | None:
+    """
+    Fetch a user by email address (case-insensitive).
+    Email values are stored normalised to lowercase, so a direct
+    LOWER() comparison handles any existing mixed-case entries too.
+    """
+    db = get_db()
+    return db.execute(
+        "SELECT * FROM users WHERE LOWER(email) = LOWER(?)", (email,)
+    ).fetchone()

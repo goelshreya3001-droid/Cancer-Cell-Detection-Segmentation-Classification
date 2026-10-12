@@ -1,41 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CoNSeP - Colorectal Cancer Analysis</title>
+    <meta name="description" content="PathAI — AI-powered cancer nuclei detection, segmentation and classification for colorectal histopathology.">
+    <title>{% block title %}PathAI — Cancer Nuclei Analysis{% endblock %}</title>
+
+    <!-- Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <!-- Inline theme application to prevent flash of wrong theme -->
+    <script>
+        (function () {
+            var t = localStorage.getItem("pathai-theme");
+            var d = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            document.documentElement.setAttribute("data-theme", t || d);
+        })();
+    </script>
 </head>
 <body>
-    <header class="app-header">
+    <!-- Accessibility: skip to main content -->
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <!-- ── Navigation ─────────────────────────────────────────── -->
+    <header class="app-header" role="banner">
         <div class="header-content">
-            <h1>🔬 CoNSeP Analysis</h1>
-            <nav class="main-nav">
-                <a href="{{ url_for('ui.about') }}">About</a>
+
+            <!-- Brand -->
+            <a href="{{ url_for('ui.index') }}" class="nav-brand" aria-label="PathAI Home">
+                <div class="nav-brand-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="9"/>
+                        <path d="M12 3v18M3 12h18M7.5 7.5l9 9"/>
+                    </svg>
+                </div>
+                <span class="nav-brand-name">Path<span>AI</span></span>
+            </a>
+
+            <!-- Primary navigation -->
+            <nav class="main-nav" id="mainNav" aria-label="Primary navigation">
+                <a href="{{ url_for('ui.about') }}" data-nav="about"
+                   {% if request.endpoint == 'ui.about' %}class="active"{% endif %}>About</a>
+
                 {% if session.get('user_id') %}
-                    <a href="{{ url_for('ui.dashboard') }}">Dashboard</a>
-                    <a href="{{ url_for('ui.analyze') }}">Analyze</a>
-                    <a href="{{ url_for('ui.history_page') }}">History</a>
-                    <a href="{{ url_for('ui.profile') }}">Profile</a>
-                    <a href="#" id="logoutBtn" class="btn btn-outline">Logout</a>
+                    <a href="{{ url_for('ui.dashboard') }}" data-nav="dashboard"
+                       {% if request.endpoint == 'ui.dashboard' %}class="active"{% endif %}>Dashboard</a>
+                    <a href="{{ url_for('ui.analyze') }}" data-nav="analyze"
+                       {% if request.endpoint == 'ui.analyze' %}class="active"{% endif %}>Analyze</a>
+                    <a href="{{ url_for('ui.history_page') }}" data-nav="history"
+                       {% if request.endpoint == 'ui.history_page' %}class="active"{% endif %}>History</a>
+                    <a href="{{ url_for('ui.profile') }}" data-nav="profile"
+                       {% if request.endpoint == 'ui.profile' %}class="active"{% endif %}>Profile</a>
                 {% else %}
-                    <a href="{{ url_for('ui.login') }}">Login</a>
-                    <a href="{{ url_for('ui.signup') }}" class="btn btn-primary">Sign Up</a>
+                    <a href="{{ url_for('ui.login') }}" data-nav="login"
+                       {% if request.endpoint == 'ui.login' %}class="active"{% endif %}>Login</a>
                 {% endif %}
             </nav>
+
+            <!-- Right-side controls -->
+            <div class="nav-controls">
+                <!-- Theme toggle -->
+                <button class="theme-toggle"
+                        id="themeToggleBtn"
+                        aria-label="Toggle light / dark theme"
+                        title="Toggle theme">
+                    <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                    <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                </button>
+
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary btn-sm">
+                        New Analysis
+                    </a>
+                    <button class="btn btn-ghost btn-sm js-logout" aria-label="Log out">
+                        Logout
+                    </button>
+                {% else %}
+                    <a href="{{ url_for('ui.signup') }}" class="btn btn-primary btn-sm">
+                        Sign Up
+                    </a>
+                {% endif %}
+
+                <!-- Mobile hamburger -->
+                <button class="nav-hamburger"
+                        id="navHamburger"
+                        aria-label="Open navigation menu"
+                        aria-expanded="false"
+                        aria-controls="mainNav">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+
         </div>
     </header>
 
-    <main class="main-container">
-        <!-- Error Alert Container -->
-        <div id="globalErrorAlert" class="alert alert-danger hidden"></div>
-        <div id="globalSuccessAlert" class="alert alert-success hidden"></div>
-        
+    <!-- ── Main content ────────────────────────────────────────── -->
+    <main class="main-container" id="main-content" role="main">
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="app-footer">
-        <p>This tool is for academic research purposes only and does not provide clinical diagnosis.</p>
+    <!-- ── Footer ─────────────────────────────────────────────── -->
+    <footer class="app-footer" role="contentinfo">
+        <div class="footer-inner">
+            <span class="footer-copy">
+                © 2024 PathAI &mdash; CoNSeP Nuclei Analysis Platform
+            </span>
+            <span class="footer-disclaimer">
+                For academic and research purposes only. Not a clinical diagnostic tool.
+            </span>
+        </div>
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>

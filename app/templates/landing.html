@@ -1,40 +1,109 @@
 {% extends "base.html" %}
+{% block title %}PathAI — Cancer Nuclei Detection & Classification{% endblock %}
 {% block content %}
+
+<!-- ── Hero ──────────────────────────────────────────────────── -->
 <section class="hero-section">
-    <h1 class="hero-title">🔬 CoNSeP Nuclei Analysis</h1>
-    <p class="hero-subtitle">Cancer-Related Nuclei Detection, Segmentation &amp; Classification in Colorectal Histopathology Images</p>
-    <p class="hero-description">
-        This system performs automated nucleus segmentation using a U-Net convolutional neural network
-        and classification using a CNN trained on the CoNSeP (Colorectal Nuclear Segmentation and Phenotypes)
-        dataset. Upload colorectal histopathology image tiles and receive detailed nuclei counts across
-        five phenotype categories.
+    <div class="hero-badge">
+        <span>🔬</span>
+        <span>Deep Learning Histopathology</span>
+    </div>
+
+    <h1 class="hero-title">
+        Automated Nuclei Analysis for<br>
+        <span class="accent">Colorectal Histopathology</span>
+    </h1>
+
+    <p class="hero-subtitle">
+        Cancer-related nuclei detection, segmentation and phenotype classification
+        powered by U-Net and CNN architectures trained on the CoNSeP dataset.
     </p>
+
+    <p class="hero-description">
+        Upload a colorectal histopathology image tile and receive a detailed breakdown of
+        nuclei across five phenotype categories — Malignant/Dysplastic, Inflammatory,
+        Healthy Epithelial, Stromal and Other — with annotated overlays.
+    </p>
+
     <div class="hero-buttons">
-        <a href="{{ url_for('ui.signup') }}" class="btn btn-primary btn-lg">Sign Up</a>
-        <a href="{{ url_for('ui.login') }}" class="btn btn-outline btn-lg">Login</a>
+        <a href="{{ url_for('ui.signup') }}" class="btn btn-primary btn-xl">
+            Get Started Free
+        </a>
+        <a href="{{ url_for('ui.about') }}" class="btn btn-ghost btn-xl">
+            Learn How It Works
+        </a>
     </div>
 </section>
 
-<section class="card" style="max-width:800px;margin:2rem auto;">
-    <div class="card-header"><h3>How It Works</h3></div>
-    <div class="card-body">
-        <div class="pipeline-flow">
-            <span class="pipeline-step">📷 Input Image</span>
-            <span class="pipeline-arrow">→</span>
-            <span class="pipeline-step">🎨 Preprocessing</span>
-            <span class="pipeline-arrow">→</span>
-            <span class="pipeline-step">🧠 U-Net Segmentation</span>
-            <span class="pipeline-arrow">→</span>
-            <span class="pipeline-step">🔍 Nuclei Extraction</span>
-            <span class="pipeline-arrow">→</span>
-            <span class="pipeline-step">📊 CNN Classification</span>
-            <span class="pipeline-arrow">→</span>
-            <span class="pipeline-step">📋 Results</span>
+<!-- ── Feature cards ─────────────────────────────────────────── -->
+<section class="features-section">
+    <p class="features-heading">What PathAI does</p>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">🧠</div>
+            <div class="feature-title">U-Net Segmentation</div>
+            <div class="feature-desc">
+                Pixel-accurate nuclei mask generation using a fully convolutional
+                U-Net trained on CoNSeP colorectal tissue images.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <div class="feature-title">Instance Separation</div>
+            <div class="feature-desc">
+                Watershed-based instance separation extracts individual nuclei
+                from the binary segmentation mask.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <div class="feature-title">CNN Classification</div>
+            <div class="feature-desc">
+                Each 32×32 nucleus crop is classified into one of five phenotype
+                categories by a dedicated CNN classifier.
+            </div>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">🎨</div>
+            <div class="feature-title">Annotated Overlays</div>
+            <div class="feature-desc">
+                Colour-coded classification overlays help visualise the spatial
+                distribution of nuclei types within the tissue.
+            </div>
         </div>
     </div>
 </section>
 
-<div class="disclaimer-box">
-    <strong>Academic Disclaimer:</strong> This tool is for academic research purposes only and does not provide clinical diagnosis.
+<!-- ── Pipeline ───────────────────────────────────────────────── -->
+<section style="max-width: 900px; margin: 0 auto 2rem;">
+    <div class="card">
+        <div class="card-header"><h3>Analysis Pipeline</h3></div>
+        <div class="card-body">
+            <div class="pipeline-steps">
+                <span class="pipeline-step">📷 Input Image</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">🎨 Stain Normalisation</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">🧠 U-Net Segmentation</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">🔍 Nucleus Extraction</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">📊 CNN Classification</span>
+                <span class="pipeline-arrow">→</span>
+                <span class="pipeline-step">📋 Results</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Disclaimer ─────────────────────────────────────────────── -->
+<div class="disclaimer-box" style="max-width: 800px; margin: 0 auto 2rem;">
+    <span class="disc-icon">⚠️</span>
+    <span>
+        <strong>Academic Disclaimer:</strong>
+        This tool is intended for academic research and educational purposes only.
+        It does not provide clinical diagnosis or medical advice.
+    </span>
 </div>
+
 {% endblock %}

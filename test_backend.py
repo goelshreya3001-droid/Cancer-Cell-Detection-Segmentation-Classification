@@ -76,7 +76,8 @@ def main():
     section("Test 2: Authenticated Workflow (User A)")
     sess_a = requests.Session()
     username_a = f"usera_{int(time.time())}"
-    sess_a.post(f"{BASE_URL}/signup", json={"username": username_a, "password": "password123", "confirm_password": "password123"})
+    email_a = f"usera_{int(time.time())}@test.example.com"
+    sess_a.post(f"{BASE_URL}/signup", json={"username": username_a, "email": email_a, "password": "password123", "confirm_password": "password123"})
     sess_a.post(f"{BASE_URL}/login", json={"username": username_a, "password": "password123"})
     
     # User A Predict
@@ -119,7 +120,8 @@ def main():
     section("Test 3: Cross-User Isolation (User B)")
     sess_b = requests.Session()
     username_b = f"userb_{int(time.time())}"
-    sess_b.post(f"{BASE_URL}/signup", json={"username": username_b, "password": "password123", "confirm_password": "password123"})
+    email_b = f"userb_{int(time.time())}@test.example.com"
+    sess_b.post(f"{BASE_URL}/signup", json={"username": username_b, "email": email_b, "password": "password123", "confirm_password": "password123"})
     sess_b.post(f"{BASE_URL}/login", json={"username": username_b, "password": "password123"})
 
     r_hist_b = sess_b.get(f"{BASE_URL}/history")

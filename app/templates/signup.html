@@ -1,32 +1,104 @@
 {% extends "base.html" %}
+{% block title %}Create Account — PathAI{% endblock %}
 {% block content %}
-<div class="auth-container">
+
+<div class="auth-wrapper">
     <div class="auth-card">
-        <h2 class="auth-title">Create Account</h2>
-        <div id="signupError" class="alert alert-danger hidden"></div>
-        <div id="signupSuccess" class="alert alert-success hidden"></div>
-        <form id="signupForm">
-            <div class="form-group">
-                <label class="form-label" for="signupUsername">Username</label>
-                <input class="form-input" type="text" id="signupUsername" required minlength="3" autocomplete="username">
+
+        <!-- Brand mark -->
+        <div class="auth-brand">
+            <div class="auth-brand-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 3v18M3 12h18M7.5 7.5l9 9"/>
+                </svg>
             </div>
+            <h1 class="auth-title">Create your account</h1>
+            <p class="auth-subtitle">Start analysing histopathology images today</p>
+        </div>
+
+        <!-- Alerts -->
+        <div id="signupError"   class="alert alert-danger  hidden" role="alert" aria-live="polite"></div>
+        <div id="signupSuccess" class="alert alert-success hidden" role="status" aria-live="polite"></div>
+
+        <form id="signupForm" novalidate autocomplete="on">
+
             <div class="form-group">
-                <label class="form-label" for="signupEmail">Email <span class="text-muted">(optional)</span></label>
-                <input class="form-input" type="email" id="signupEmail" autocomplete="email">
+                <label class="form-label" for="signupUsername">
+                    Username <span class="required-mark" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="form-input"
+                    type="text"
+                    id="signupUsername"
+                    name="username"
+                    required
+                    minlength="3"
+                    autocomplete="username"
+                    placeholder="At least 3 characters"
+                    aria-required="true"
+                    aria-describedby="usernameHint">
+                <span class="form-hint" id="usernameHint">Must be at least 3 characters.</span>
             </div>
+
             <div class="form-group">
-                <label class="form-label" for="signupPassword">Password</label>
-                <input class="form-input" type="password" id="signupPassword" required minlength="4" autocomplete="new-password">
+                <label class="form-label" for="signupEmail">
+                    Email address <span class="required-mark" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="form-input"
+                    type="email"
+                    id="signupEmail"
+                    name="email"
+                    required
+                    autocomplete="email"
+                    placeholder="you@example.com"
+                    aria-required="true"
+                    aria-describedby="emailError">
+                <span class="form-error" id="emailError" role="alert"></span>
             </div>
+
             <div class="form-group">
-                <label class="form-label" for="signupConfirm">Confirm Password</label>
-                <input class="form-input" type="password" id="signupConfirm" required autocomplete="new-password">
+                <label class="form-label" for="signupPassword">
+                    Password <span class="required-mark" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="form-input"
+                    type="password"
+                    id="signupPassword"
+                    name="password"
+                    required
+                    minlength="4"
+                    autocomplete="new-password"
+                    placeholder="At least 4 characters"
+                    aria-required="true">
             </div>
-            <button type="submit" class="btn btn-primary btn-full">Create Account</button>
+
+            <div class="form-group">
+                <label class="form-label" for="signupConfirm">
+                    Confirm Password <span class="required-mark" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="form-input"
+                    type="password"
+                    id="signupConfirm"
+                    name="confirm_password"
+                    required
+                    autocomplete="new-password"
+                    placeholder="Repeat your password"
+                    aria-required="true">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 0.5rem;">
+                Create Account
+            </button>
         </form>
-        <p class="text-center text-muted" style="margin-top:1rem;">
-            Already have an account? <a href="{{ url_for('ui.login') }}">Login</a>
+
+        <p class="auth-footer">
+            Already have an account?
+            <a href="{{ url_for('ui.login') }}">Sign in</a>
         </p>
     </div>
 </div>
+
 {% endblock %}

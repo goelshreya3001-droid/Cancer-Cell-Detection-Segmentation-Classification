@@ -1,23 +1,66 @@
 {% extends "base.html" %}
+{% block title %}Login — PathAI{% endblock %}
 {% block content %}
-<div class="auth-container">
+
+<div class="auth-wrapper">
     <div class="auth-card">
-        <h2 class="auth-title">Login</h2>
-        <div id="loginError" class="alert alert-danger hidden"></div>
-        <form id="loginForm">
-            <div class="form-group">
-                <label class="form-label" for="loginUsername">Username</label>
-                <input class="form-input" type="text" id="loginUsername" required autocomplete="username">
+
+        <!-- Brand mark -->
+        <div class="auth-brand">
+            <div class="auth-brand-icon" aria-hidden="true">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9"/>
+                    <path d="M12 3v18M3 12h18M7.5 7.5l9 9"/>
+                </svg>
             </div>
+            <h1 class="auth-title">Welcome back</h1>
+            <p class="auth-subtitle">Sign in to your PathAI account</p>
+        </div>
+
+        <!-- Error alert -->
+        <div id="loginError" class="alert alert-danger hidden" role="alert" aria-live="polite"></div>
+
+        <form id="loginForm" novalidate autocomplete="on">
             <div class="form-group">
-                <label class="form-label" for="loginPassword">Password</label>
-                <input class="form-input" type="password" id="loginPassword" required autocomplete="current-password">
+                <label class="form-label" for="loginUsername">
+                    Username <span class="required-mark" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="form-input"
+                    type="text"
+                    id="loginUsername"
+                    name="username"
+                    required
+                    autocomplete="username"
+                    placeholder="Enter your username"
+                    aria-required="true">
             </div>
-            <button type="submit" class="btn btn-primary btn-full">Login</button>
+
+            <div class="form-group">
+                <label class="form-label" for="loginPassword">
+                    Password <span class="required-mark" aria-hidden="true">*</span>
+                </label>
+                <input
+                    class="form-input"
+                    type="password"
+                    id="loginPassword"
+                    name="password"
+                    required
+                    autocomplete="current-password"
+                    placeholder="Enter your password"
+                    aria-required="true">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full" style="margin-top: 0.5rem;">
+                Sign In
+            </button>
         </form>
-        <p class="text-center text-muted" style="margin-top:1rem;">
-            Don't have an account? <a href="{{ url_for('ui.signup') }}">Sign Up</a>
+
+        <p class="auth-footer">
+            Don't have an account?
+            <a href="{{ url_for('ui.signup') }}">Create one free</a>
         </p>
     </div>
 </div>
+
 {% endblock %}

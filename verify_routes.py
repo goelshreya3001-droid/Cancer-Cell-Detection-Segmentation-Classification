@@ -25,12 +25,16 @@ def check(name, condition, detail=""):
     else:
         print(f"  [FAIL] {name}  {detail}")
 
+ts = int(time.time())
+test_user = f"routeuser_{ts}"
+test_email = f"routeuser_{ts}@example.com"
+
 # 1. POST /signup
-r = sess.post(f'{BASE}/signup', json={'username': 'routefix1', 'password': '123', 'confirm_password': '123'})
+r = sess.post(f'{BASE}/signup', json={'username': test_user, 'email': test_email, 'password': 'password123', 'confirm_password': 'password123'})
 check("POST /signup", r.status_code == 201, f"status={r.status_code}")
 
 # 2. POST /login
-r = sess.post(f'{BASE}/login', json={'username': 'routefix1', 'password': '123'})
+r = sess.post(f'{BASE}/login', json={'username': test_user, 'password': 'password123'})
 check("POST /login", r.status_code == 200, f"status={r.status_code}")
 
 # 3. POST /logout
@@ -38,7 +42,7 @@ r = sess.post(f'{BASE}/logout')
 check("POST /logout", r.status_code == 200, f"status={r.status_code}")
 
 # 4. Re-login and test POST /predict
-sess.post(f'{BASE}/login', json={'username': 'routefix1', 'password': '123'})
+sess.post(f'{BASE}/login', json={'username': test_user, 'password': 'password123'})
 with open('test_assets/test_slide.png', 'rb') as f:
     r = sess.post(f'{BASE}/predict', files={'image': ('test.png', f, 'image/png')})
 check("POST /predict", r.status_code == 200 and r.json().get('success'), f"status={r.status_code} nuclei={r.json().get('total_nuclei')}")

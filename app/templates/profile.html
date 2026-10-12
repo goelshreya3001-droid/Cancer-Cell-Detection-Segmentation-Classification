@@ -1,36 +1,97 @@
 {% extends "base.html" %}
+{% block title %}My Profile — PathAI{% endblock %}
 {% block content %}
+
 <div class="page-header">
-    <h1 class="page-title">My Profile</h1>
+    <div class="page-header-left">
+        <h1 class="page-title">My Profile</h1>
+        <p class="page-subtitle">Account details and settings</p>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-header"><h3>Account Information</h3></div>
+<!-- Account info card -->
+<div class="card" style="max-width: 640px;">
+    <div class="card-header">
+        <h3>Account Information</h3>
+    </div>
     <div class="card-body">
-        <div id="profileLoading" class="loading-state">
-            <p class="loading-text">Loading profile...</p>
+
+        <!-- Loading state -->
+        <div id="profileLoading" class="loading-state" style="padding: 2rem 0;" role="status" aria-live="polite">
+            <div class="loading-spinner" aria-hidden="true"></div>
+            <p class="loading-text">Loading profile…</p>
         </div>
-        <div id="profileInfo" class="profile-info hidden">
-            <div class="profile-row">
+
+        <!-- Profile info rows (hidden until loaded) -->
+        <div id="profileInfo" class="hidden">
+            <div class="profile-header" style="margin-bottom: 1.375rem;">
+                <div class="profile-avatar" aria-hidden="true">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <div>
+                    <div style="font-size: 1.125rem; font-weight: 700; color: var(--txt-primary);"
+                         id="profileAvatarName">–</div>
+                    <div style="font-size: 0.875rem; color: var(--txt-muted);" id="profileAvatarEmail">–</div>
+                </div>
+            </div>
+
+            <div class="profile-info-row">
                 <span class="profile-label">Username</span>
                 <span class="profile-value" id="profileUsername">–</span>
             </div>
-            <div class="profile-row">
-                <span class="profile-label">Email</span>
+            <div class="profile-info-row">
+                <span class="profile-label">Email address</span>
                 <span class="profile-value" id="profileEmail">–</span>
             </div>
-            <div class="profile-row">
-                <span class="profile-label">Member Since</span>
+            <div class="profile-info-row">
+                <span class="profile-label">Member since</span>
                 <span class="profile-value" id="profileCreated">–</span>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header"><h3>Actions</h3></div>
+<!-- Danger zone card -->
+<div class="card" style="max-width: 640px;">
+    <div class="card-header">
+        <h3>Session</h3>
+    </div>
     <div class="card-body">
-        <button id="profileLogout" class="btn btn-danger">Logout</button>
+        <p class="text-sm text-muted" style="margin-bottom: 1rem;">
+            Logging out will end your current session. Your analyses and data are safely stored.
+        </p>
+        <button class="btn btn-danger btn-sm js-logout" aria-label="Log out of PathAI">
+            Sign Out
+        </button>
     </div>
 </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Populate avatar header names from profile data
+(function () {
+    var origInit = window.initProfileExtra;
+    document.addEventListener("DOMContentLoaded", function () {
+        var observer = new MutationObserver(function () {
+            var info = document.getElementById("profileInfo");
+            if (info && !info.classList.contains("hidden")) {
+                var uname = document.getElementById("profileUsername");
+                var email = document.getElementById("profileEmail");
+                var avatarName  = document.getElementById("profileAvatarName");
+                var avatarEmail = document.getElementById("profileAvatarEmail");
+                if (uname && avatarName)  avatarName.textContent  = uname.textContent;
+                if (email && avatarEmail) avatarEmail.textContent = email.textContent;
+                observer.disconnect();
+            }
+        });
+        var target = document.getElementById("profileInfo");
+        if (target) observer.observe(target, { attributes: true, attributeFilter: ["class"] });
+    });
+})();
+</script>
 {% endblock %}

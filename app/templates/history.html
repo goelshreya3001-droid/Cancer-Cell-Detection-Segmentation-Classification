@@ -1,39 +1,61 @@
 {% extends "base.html" %}
+{% block title %}Analysis History — PathAI{% endblock %}
 {% block content %}
+
 <div class="page-header">
-    <h1 class="page-title">Analysis History</h1>
-    <p class="page-subtitle">Your previous analyses</p>
+    <div class="page-header-left">
+        <h1 class="page-title">Analysis History</h1>
+        <p class="page-subtitle">All your previous nuclei analyses, most recent first</p>
+    </div>
+    <div>
+        <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary">🔬 New Analysis</a>
+    </div>
 </div>
 
-<div id="historyLoading" class="loading-state">
-    <div class="loading-spinner"></div>
-    <p class="loading-text">Loading history...</p>
+<!-- Loading state -->
+<div id="historyLoading" class="loading-state" role="status" aria-live="polite">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p class="loading-text">Loading history…</p>
 </div>
 
-<div id="historyError" class="alert alert-danger hidden"></div>
+<!-- Error state -->
+<div id="historyError" class="alert alert-danger hidden" role="alert" aria-live="polite"></div>
 
-<div id="historyEmpty" class="empty-state hidden">
-    <p>No analyses found. Start by analyzing an image.</p>
-    <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary">🔬 New Analysis</a>
+<!-- Empty state -->
+<div id="historyEmpty" class="hidden">
+    <div class="card">
+        <div class="card-body">
+            <div class="empty-state">
+                <div class="empty-state-icon">🔬</div>
+                <div class="empty-state-title">No analyses yet</div>
+                <div class="empty-state-desc">
+                    Upload a histopathology image to perform your first nuclei analysis.
+                </div>
+                <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary">
+                    Start Analysing
+                </a>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div id="historyTable" class="table-container hidden">
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Filename</th>
-                <th>Total Nuclei</th>
-                <th>Malignant</th>
-                <th>Time (s)</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-    </table>
+<!-- Table -->
+<div id="historyTable" class="card hidden">
+    <div class="table-wrapper">
+        <table class="data-table" aria-label="Analysis history">
+            <thead>
+                <tr>
+                    <th scope="col">Date &amp; Time</th>
+                    <th scope="col">Filename</th>
+                    <th scope="col">Total Nuclei</th>
+                    <th scope="col">Malignant</th>
+                    <th scope="col">Time (s)</th>
+                    <th scope="col">Action</th>
+                </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+        </table>
+    </div>
 </div>
 
-<div class="quick-actions" style="margin-top:1.5rem;">
-    <a href="{{ url_for('ui.analyze') }}" class="btn btn-primary">🔬 New Analysis</a>
-</div>
 {% endblock %}
