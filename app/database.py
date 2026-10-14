@@ -69,8 +69,6 @@ CREATE TABLE IF NOT EXISTS analyses (
     FOREIGN KEY (user_id) REFERENCES users (id)
 );
 """
-
-
 def init_db(app) -> None:
     """
     Create the database tables if they do not already exist.
@@ -79,27 +77,35 @@ def init_db(app) -> None:
     """
     with app.app_context():
         db = sqlite3.connect(app.config["DATABASE_PATH"])
-        
+
         # 1. Create tables if they don't exist
         db.executescript(SCHEMA)
-        
-        # 2. Safe migration for existing 'analyses' table
+
+        # 2. Safe migration for existing analyses table
         cursor = db.execute("PRAGMA table_info(analyses)")
         columns = [row[1] for row in cursor.fetchall()]
-        
-        if "user_id" not in columns:
-            db.execute("ALTER TABLE analyses ADD COLUMN user_id INTEGER REFERENCES users(id)")
 
-        # 3. Safe migration: add email column to users if missing
+        if "user_id" not in columns:
+            db.execute(
+                "ALTER TABLE analyses ADD COLUMN user_id INTEGER REFERENCES users(id)"
+            )
+
+        # 3. Add email column if missing
         cursor_u = db.execute("PRAGMA table_info(users)")
         user_columns = [row[1] for row in cursor_u.fetchall()]
+
         if "email" not in user_columns:
             db.execute("ALTER TABLE users ADD COLUMN email TEXT")
 
+        # 4. Enforce case-insensitive email uniqueness
+        db.execute("""
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique
+            ON users (LOWER(email))
+            WHERE email IS NOT NULL AND TRIM(email) != ''
+        """)
+
         db.commit()
         db.close()
-
-
 # ---------------------------------------------------------------------------
 # CRUD helpers
 # ---------------------------------------------------------------------------
