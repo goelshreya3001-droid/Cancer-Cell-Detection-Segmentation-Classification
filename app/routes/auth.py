@@ -112,14 +112,19 @@ def login():
     Authenticate a user and create a session.
     Requires: username, password
     """
-    data     = request.json if request.is_json else request.form
-    username = data.get("username", "").strip()
+    data = request.json if request.is_json else request.form
+    identifier = data.get("username", "").strip()
     password = data.get("password", "")
 
-    if not username or not password:
-        return jsonify({"success": False, "error": "Username and password are required."}), 400
+    if not identifier or not password:
+        return jsonify({"success": False, "error": "Username/Email and password are required."}), 400
 
-    user = get_user_by_username(username)
+    # Try looking up by username first
+    user = get_user_by_username(identifier)
+    # If not found, treat the identifier as an email (trim & lower‑case)
+    if user is None:
+        email_norm = _normalise_email(identifier)
+        user = get_user_by_email(email_norm)
 
     if user is None or not check_password_hash(user["password_hash"], password):
         return jsonify({"success": False, "error": "Invalid username or password."}), 401
