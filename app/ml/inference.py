@@ -1,32 +1,27 @@
 """
-Core ML inference pipeline.
+Flask-compatible inference pipeline using the ML developer's latest pipeline.
 
-Assembles the full two-stage pipeline extracted from:
-  - 03_evaluate_unet.ipynb     (separate_and_extract_nuclei, sliding-window)
-  - evaluate_generalization.ipynb (predict_large_image)
-  - 04_nuclei_classification.ipynb (per-nucleus classification)
+Preserved backend API:
+    load_models()
+    run_inference(...)
 
-Public API:
-    load_models()          — loads both models once at startup
-    run_inference(...)     — runs the full pipeline on one image
-
-DO NOT modify model architectures or weight-loading logic.
+The model architecture and state-dict loading remain unchanged.
 """
 
 import os
 import time
 import logging
 from pathlib import Path
-
-# Suppress Anaconda + PyTorch OpenMP DLL conflict on Windows.
-# This must be set BEFORE torch is imported.
-os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+from collections import Counter
 from typing import Any
+
+# Must be set before importing torch on some Windows/Anaconda setups.
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 import cv2
 import numpy as np
 import torch
-from scipy import ndimage
+from scipy import ndimage as ndi
 from skimage.feature import peak_local_max
 from skimage.segmentation import watershed
 
@@ -36,15 +31,13 @@ from .stain_utils import MacenkoNormalizer
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Constants
+# Paths and class definitions
 # ---------------------------------------------------------------------------
 
-# Paths to trained weights (relative to project root)
-_PROJECT_ROOT = Path(__file__).resolve().parents[2]   # .../Cancer-Cell-...
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
 UNET_WEIGHTS_PATH = _PROJECT_ROOT / "models" / "unet.pth"
 CLASSIFIER_WEIGHTS_PATH = _PROJECT_ROOT / "models" / "classifier.pth"
 
-# Nucleus class labels — must match 04_nuclei_classification.ipynb exactly
 CLASS_NAMES = {
     0: "Other",
     1: "Inflammatory",
@@ -53,77 +46,74 @@ CLASS_NAMES = {
     4: "Stromal",
 }
 
-# BGR colors for overlay drawing (OpenCV convention)
+# Exact BGR colors supplied by the ML developer.
 CLASS_COLORS_BGR = {
-    0: (128, 128, 128),   # Gray  — Other/Misc
-    1: (200, 100,   0),   # Blue  — Inflammatory
-    2: (0,   200,  50),   # Green — Healthy Epithelial
-    3: (0,    0,  220),   # Red   — Malignant Epithelial
-    4: (0,   200, 220),   # Yellow — Stromal
+    0: (140, 140, 140),  # Grey - Other
+    1: (255, 0, 0),      # Blue - Inflammatory
+    2: (0, 255, 0),      # Green - Healthy Epithelial
+    3: (0, 0, 255),      # Red - Malignant / Dysplastic
+    4: (255, 0, 255),    # Magenta/Pink - Stromal
 }
 
-# Processing constants — tuned to match 05_final_Pipeline.ipynb
-PATCH_SIZE    = 256   # U-Net input tile size
-STRIDE        = 128   # Sliding-window stride for large images
-UNET_THRESH   = 0.45  # Optimal binary mask cutoff threshold
-MIN_DISTANCE  = 6     # Watershed: min distance between nucleus peaks
-MIN_AREA      = 25    # Watershed: minimum nucleus area in pixels
-CROP_SIZE     = 32    # CNN input: nucleus crop size
-CROP_PADDING  = 2     # Padding around each nucleus bounding box
-
-# ImageNet normalization statistics used by NucleiClassifier in 05_final_Pipeline.ipynb
-IMAGENET_MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-IMAGENET_STD  = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+PATCH_SIZE = 256
+UNET_THRESHOLD = 0.5
+MIN_DISTANCE = 3
+MIN_INSTANCE_PIXELS = 8
+CROP_SIZE = 32
 
 # ---------------------------------------------------------------------------
 # Singleton model state
 # ---------------------------------------------------------------------------
 
-_models: dict[str, Any] = {}   # populated by load_models()
+_models: dict[str, Any] = {}
 _normalizer = MacenkoNormalizer()
 _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+# ---------------------------------------------------------------------------
+# Model loading - existing backend implementation preserved
+# ---------------------------------------------------------------------------
+
 def load_models() -> None:
-    """
-    Load both U-Net and NucleiClassifier from disk into memory.
-
-    Call this once at application startup. Models are stored in the
-    module-level `_models` dict and reused for every subsequent inference.
-
-    Raises:
-        FileNotFoundError: if weight files are missing.
-    """
+    """Load the U-Net and classifier state dictionaries once."""
     global _models, _device
 
     if _models:
-        logger.debug("Models already loaded — skipping.")
+        logger.debug("Models already loaded - skipping.")
         return
 
     logger.info("Loading models on device: %s", _device)
 
-    # --- U-Net ---
     if not UNET_WEIGHTS_PATH.exists():
         raise FileNotFoundError(
-            f"U-Net weights not found at: {UNET_WEIGHTS_PATH}\n"
-            "Make sure models/unet.pth is present in the project root."
+            f"U-Net weights not found at: {UNET_WEIGHTS_PATH}"
         )
+
     unet = UNet(in_channels=3, out_channels=1).to(_device)
     unet.load_state_dict(
-        torch.load(str(UNET_WEIGHTS_PATH), map_location=_device, weights_only=True)
+        torch.load(
+            str(UNET_WEIGHTS_PATH),
+            map_location=_device,
+            weights_only=True,
+        ),
+        strict=True,
     )
     unet.eval()
     logger.info("U-Net loaded from %s", UNET_WEIGHTS_PATH)
 
-    # --- NucleiClassifier ---
     if not CLASSIFIER_WEIGHTS_PATH.exists():
         raise FileNotFoundError(
-            f"Classifier weights not found at: {CLASSIFIER_WEIGHTS_PATH}\n"
-            "Make sure models/classifier.pth is present in the project root."
+            f"Classifier weights not found at: {CLASSIFIER_WEIGHTS_PATH}"
         )
+
     classifier = NucleiClassifier(num_classes=5).to(_device)
     classifier.load_state_dict(
-        torch.load(str(CLASSIFIER_WEIGHTS_PATH), map_location=_device, weights_only=True)
+        torch.load(
+            str(CLASSIFIER_WEIGHTS_PATH),
+            map_location=_device,
+            weights_only=True,
+        ),
+        strict=True,
     )
     classifier.eval()
     logger.info("NucleiClassifier loaded from %s", CLASSIFIER_WEIGHTS_PATH)
@@ -134,187 +124,162 @@ def load_models() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Stage 1 — Segmentation: sliding-window U-Net inference
+# Stage 1 - Full-resolution tiled U-Net segmentation (developer's logic)
 # ---------------------------------------------------------------------------
 
 def _predict_segmentation(img_rgb: np.ndarray) -> np.ndarray:
-    """
-    Run U-Net over the full image using overlapping sliding-window tiling.
-
-    Extracted from evaluate_generalization.ipynb → predict_large_image().
-
-    Args:
-        img_rgb: uint8 RGB array (H, W, 3). Any size supported.
-
-    Returns:
-        Binary mask (H, W) uint8, values 0 or 1.
-    """
+    """Run U-Net on 256x256 tiles and return a binary mask."""
     unet = _models["unet"]
-    h, w, _ = img_rgb.shape
-    prob_map  = np.zeros((h, w), dtype=np.float32)
-    count_map = np.zeros((h, w), dtype=np.float32)
+    orig_h, orig_w, _ = img_rgb.shape
+    full_mask = np.zeros((orig_h, orig_w), dtype=np.float32)
 
-    # For small images (≤ PATCH_SIZE), process as single tile
-    if h <= PATCH_SIZE and w <= PATCH_SIZE:
-        # Pad to PATCH_SIZE if needed so U-Net dimensions are multiples of 16
-        pad_h = PATCH_SIZE - h
-        pad_w = PATCH_SIZE - w
-        padded = np.pad(img_rgb, ((0, pad_h), (0, pad_w), (0, 0)), mode="reflect")
-        patch = padded.astype(np.float32) / 255.0
-        t = torch.tensor(patch.transpose(2, 0, 1)).unsqueeze(0).to(_device)
-        with torch.no_grad():
-            pred = torch.sigmoid(unet(t)).squeeze().cpu().numpy()
-        prob_map  = pred[:h, :w]
-        count_map = np.ones((h, w), dtype=np.float32)
-    else:
-        # Sliding-window tiling (source: evaluate_generalization.ipynb)
-        for y in range(0, max(1, h - PATCH_SIZE + 1), STRIDE):
-            for x in range(0, max(1, w - PATCH_SIZE + 1), STRIDE):
-                y_end = min(y + PATCH_SIZE, h)
-                x_end = min(x + PATCH_SIZE, w)
-                y_start = y_end - PATCH_SIZE
-                x_start = x_end - PATCH_SIZE
+    for y in range(0, orig_h, PATCH_SIZE):
+        for x in range(0, orig_w, PATCH_SIZE):
+            y_end = min(y + PATCH_SIZE, orig_h)
+            x_end = min(x + PATCH_SIZE, orig_w)
+            patch = img_rgb[y:y_end, x:x_end]
 
-                patch = img_rgb[y_start:y_end, x_start:x_end].astype(np.float32) / 255.0
-                t = torch.tensor(patch.transpose(2, 0, 1)).unsqueeze(0).to(_device)
-                with torch.no_grad():
-                    pred = torch.sigmoid(unet(t)).squeeze().cpu().numpy()
-                prob_map[y_start:y_end, x_start:x_end]  += pred
-                count_map[y_start:y_end, x_start:x_end] += 1.0
+            pad_h = PATCH_SIZE - patch.shape[0]
+            pad_w = PATCH_SIZE - patch.shape[1]
+            if pad_h > 0 or pad_w > 0:
+                # Match developer code. Replicate is a safe fallback for
+                # one-pixel dimensions where REFLECT padding is not suitable.
+                border_type = (
+                    cv2.BORDER_REFLECT
+                    if patch.shape[0] > 1 and patch.shape[1] > 1
+                    else cv2.BORDER_REPLICATE
+                )
+                patch = cv2.copyMakeBorder(
+                    patch, 0, pad_h, 0, pad_w, border_type
+                )
 
-        count_map[count_map == 0] = 1.0
+            tensor_patch = (
+                torch.from_numpy(patch)
+                .permute(2, 0, 1)
+                .float()
+                .div(255.0)
+                .unsqueeze(0)
+                .to(_device)
+            )
 
-    final_prob = prob_map / count_map
-    return (final_prob > UNET_THRESH).astype(np.uint8)
+            with torch.no_grad():
+                prediction = (
+                    torch.sigmoid(unet(tensor_patch))
+                    .squeeze()
+                    .cpu()
+                    .numpy()
+                )
+
+            full_mask[y:y_end, x:x_end] = prediction[
+                : y_end - y, : x_end - x
+            ]
+
+    return (full_mask > UNET_THRESHOLD).astype(np.uint8)
 
 
 # ---------------------------------------------------------------------------
-# Stage 2 — Instance separation: Watershed post-processing
+# Stage 2 - Watershed and developer's centre-based 32x32 crop extraction
 # ---------------------------------------------------------------------------
 
 def _separate_nuclei(
-    raw_img: np.ndarray,
+    img_rgb: np.ndarray,
     binary_mask: np.ndarray,
 ) -> tuple[np.ndarray, list[dict]]:
-    """
-    Separate touching nuclei using distance transform + watershed.
+    """Separate instances and create 32x32 RGB crops scaled only by /255."""
+    orig_h, orig_w, _ = img_rgb.shape
 
-    Extracted from 03_evaluate_unet.ipynb → separate_and_extract_nuclei().
-
-    Args:
-        raw_img:     uint8 RGB array (H, W, 3).
-        binary_mask: uint8 array (H, W), values 0 or 1.
-
-    Returns:
-        labels:  (H, W) int32 watershed label array (0 = background).
-        nuclei:  list of dicts, each with keys:
-                   crop  — (C, H, C) float32 tensor ready for classifier
-                   bbox  — (x_min, y_min, x_max, y_max) in pixel coords
-                   area  — nucleus area in pixels
-    """
-    h, w, _ = raw_img.shape
-
-    # 1. Distance transform
-    dist_map = cv2.distanceTransform(
-        (binary_mask * 255).astype(np.uint8), cv2.DIST_L2, 5
+    distance = ndi.distance_transform_edt(binary_mask)
+    coords = peak_local_max(
+        distance,
+        min_distance=MIN_DISTANCE,
+        labels=binary_mask,
     )
 
-    # 2. Local maxima → nucleus centres
-    coordinates = peak_local_max(
-        dist_map, min_distance=MIN_DISTANCE, labels=binary_mask.astype(bool)
-    )
+    if len(coords) == 0:
+        return np.zeros((orig_h, orig_w), dtype=np.int32), []
 
-    if len(coordinates) == 0:
-        return np.zeros((h, w), dtype=np.int32), []
+    mask_peaks = np.zeros(distance.shape, dtype=bool)
+    mask_peaks[tuple(coords.T)] = True
+    markers, _ = ndi.label(mask_peaks)
+    labels = watershed(-distance, markers, mask=binary_mask.astype(bool))
 
-    # 3. Watershed markers
-    markers = np.zeros(dist_map.shape, dtype=np.int32)
-    for idx, (r, c) in enumerate(coordinates, start=1):
-        markers[r, c] = idx
-    markers = ndimage.label(markers)[0]
-
-    # 4. Watershed assignment
-    labels = watershed(-dist_map, markers, mask=binary_mask.astype(bool))
-
-    # 5. Extract per-nucleus crops + bounding boxes
     nuclei: list[dict] = []
+
     for label_id in np.unique(labels):
         if label_id == 0:
             continue
 
-        nucleus_area = int(np.sum(labels == label_id))
-        if nucleus_area < MIN_AREA:
+        instance_mask = (labels == label_id).astype(np.uint8)
+        ys, xs = np.where(instance_mask == 1)
+
+        if len(xs) < MIN_INSTANCE_PIXELS:
             continue
 
-        coords = np.where(labels == label_id)
-        y_min, y_max = int(np.min(coords[0])), int(np.max(coords[0]))
-        x_min, x_max = int(np.min(coords[1])), int(np.max(coords[1]))
+        # Match the developer's crop: 32x32 around the instance centroid.
+        cy, cx = int(np.mean(ys)), int(np.mean(xs))
+        y1, y2 = max(0, cy - 16), min(orig_h, cy + 16)
+        x1, x2 = max(0, cx - 16), min(orig_w, cx + 16)
 
-        # Skip degenerate tiny instances
-        if (y_max - y_min) < 4 or (x_max - x_min) < 4:
-            continue
-
-        # Padding (source: 05_final_Pipeline.ipynb)
-        y_pad_min = max(0, y_min - CROP_PADDING)
-        y_pad_max = min(h, y_max + CROP_PADDING)
-        x_pad_min = max(0, x_min - CROP_PADDING)
-        x_pad_max = min(w, x_max + CROP_PADDING)
-
-        crop = raw_img[y_pad_min:y_pad_max, x_pad_min:x_pad_max]
+        crop = img_rgb[y1:y2, x1:x2]
         if crop.size == 0:
             continue
 
-        # Resize to 32×32 and normalise with ImageNet stats — source: 05_final_Pipeline.ipynb
-        crop_resized = cv2.resize(crop, (CROP_SIZE, CROP_SIZE)).astype(np.float32) / 255.0
-        crop_norm = (crop_resized - IMAGENET_MEAN) / IMAGENET_STD
-        crop_tensor = torch.tensor(
-            crop_norm.transpose(2, 0, 1), dtype=torch.float32
-        )  # (3, 32, 32)
+        if crop.shape[0] != CROP_SIZE or crop.shape[1] != CROP_SIZE:
+            crop = cv2.resize(crop, (CROP_SIZE, CROP_SIZE))
+
+        # Developer's new classifier preprocessing: ToTensor equivalent,
+        # with values scaled to [0, 1]; no ImageNet mean/std normalization.
+        crop_tensor = (
+            torch.from_numpy(crop.copy())
+            .permute(2, 0, 1)
+            .float()
+            .div(255.0)
+        )
 
         nuclei.append({
-            "crop":  crop_tensor,
-            "bbox":  (x_min, y_min, x_max, y_max),
-            "area":  nucleus_area,
+            "crop": crop_tensor,
+            "instance_mask": instance_mask,
+            "bbox": (
+                int(xs.min()), int(ys.min()),
+                int(xs.max()), int(ys.max()),
+            ),
+            "area": int(len(xs)),
         })
 
     return labels, nuclei
 
 
 # ---------------------------------------------------------------------------
-# Stage 3 — Classification: batch CNN forward pass
+# Stage 3 - Batch classification (developer's argmax logic)
 # ---------------------------------------------------------------------------
 
-def _classify_nuclei(nuclei: list[dict], batch_size: int = 64) -> list[int]:
-    """
-    Run NucleiClassifier on all extracted nucleus crops.
-
-    Args:
-        nuclei:     list of nucleus dicts from _separate_nuclei().
-        batch_size: number of crops to process per forward pass.
-
-    Returns:
-        List of integer class IDs (0–4), one per nucleus.
-    """
+def _classify_nuclei(
+    nuclei: list[dict],
+    batch_size: int = 64,
+) -> list[int]:
+    """Classify crops using softmax argmax, with no malignant override."""
     if not nuclei:
         return []
 
     classifier = _models["classifier"]
-    all_preds: list[int] = []
-
-    crops = torch.stack([n["crop"] for n in nuclei])  # (N, 3, 32, 32)
+    crops = torch.stack([nucleus["crop"] for nucleus in nuclei])
+    predictions: list[int] = []
 
     with torch.no_grad():
         for start in range(0, len(crops), batch_size):
-            batch = crops[start : start + batch_size].to(_device)
+            batch = crops[start:start + batch_size].to(_device)
             logits = classifier(batch)
-            preds = logits.argmax(dim=1).cpu().tolist()
-            all_preds.extend(preds)
+            probabilities = torch.softmax(logits, dim=1)
+            batch_predictions = torch.argmax(probabilities, dim=1)
+            predictions.extend(
+                int(class_id) for class_id in batch_predictions.cpu().tolist()
+            )
 
-    return all_preds
+    return predictions
 
 
 # ---------------------------------------------------------------------------
-# Overlay generation
+# Overlay generation - developer's instance-contour overlay
 # ---------------------------------------------------------------------------
 
 def _draw_overlay(
@@ -322,36 +287,28 @@ def _draw_overlay(
     nuclei: list[dict],
     class_ids: list[int],
 ) -> np.ndarray:
-    """
-    Draw colored nucleus contours on the original image.
+    """Draw class-colored instance contours and return an RGB image."""
+    overlay_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR).copy()
 
-    Color coding:
-        Gray   — Other/Misc (class 0)
-        Blue   — Inflammatory (class 1)
-        Green  — Healthy Epithelial (class 2)
-        Red    — Malignant Epithelial (class 3)
-        Yellow — Stromal (class 4)
+    for nucleus, class_id in zip(nuclei, class_ids):
+        contours, _ = cv2.findContours(
+            nucleus["instance_mask"],
+            cv2.RETR_EXTERNAL,
+            cv2.CHAIN_APPROX_SIMPLE,
+        )
+        cv2.drawContours(
+            overlay_bgr,
+            contours,
+            -1,
+            CLASS_COLORS_BGR[class_id],
+            2,
+        )
 
-    Args:
-        img_rgb:   Original uint8 RGB image.
-        nuclei:    List of nucleus dicts (with bbox key).
-        class_ids: Predicted class per nucleus.
-
-    Returns:
-        Overlay RGB image with nucleus rectangles drawn.
-    """
-    overlay = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR).copy()
-
-    for nucleus, cls_id in zip(nuclei, class_ids):
-        x_min, y_min, x_max, y_max = nucleus["bbox"]
-        color = CLASS_COLORS_BGR.get(cls_id, (128, 128, 128))
-        cv2.rectangle(overlay, (x_min, y_min), (x_max, y_max), color, thickness=2)
-
-    return cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+    return cv2.cvtColor(overlay_bgr, cv2.COLOR_BGR2RGB)
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# Public API - Flask backend contract preserved
 # ---------------------------------------------------------------------------
 
 def run_inference(
@@ -361,38 +318,8 @@ def run_inference(
     save_mask_path: str | None = None,
 ) -> dict:
     """
-    Run the full two-stage pipeline on a single histopathology image.
-
-    Pipeline:
-        Input image
-        → U-Net sliding-window segmentation → binary nuclei mask (cutoff 0.45)
-        → Watershed instance separation → individual nucleus crops (32x32)
-        → ImageNet normalization + NucleiClassifier (batched) → per-nucleus class IDs
-        → Colored overlay image + aggregate counts
-
-    Args:
-        image_path:               Absolute or relative path to the input image.
-        apply_stain_normalization: Whether to run Macenko normalization first (default False,
-                                  matching 05_final_Pipeline.ipynb to prevent H&E stain loss).
-        save_overlay_path:        If given, saves overlay image to this path.
-        save_mask_path:           If given, saves binary mask image to this path.
-
-    Returns:
-        A dict with:
-            "overlay_image"      : (H, W, 3) uint8 RGB overlay image
-            "mask_image"         : (H, W)    uint8 binary mask (0 or 1)
-            "total_nuclei"       : int — total nuclei detected
-            "malignant_count"    : int — class 3 (Malignant Epithelial)
-            "inflammatory_count" : int — class 1 (Inflammatory)
-            "healthy_count"      : int — class 2 (Healthy Epithelial)
-            "stromal_count"      : int — class 4 (Stromal)
-            "other_count"        : int — class 0 (Other/Misc)
-            "nuclei_details"     : list of dicts with bbox, class_id, class_name
-            "processing_time_sec": float
-
-    Raises:
-        RuntimeError: if load_models() has not been called first.
-        FileNotFoundError: if image_path does not exist.
+    Run the developer's final pipeline while preserving Flask's dictionary
+    response keys and the existing run_inference function signature.
     """
     if not _models:
         raise RuntimeError(
@@ -403,76 +330,97 @@ def run_inference(
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image not found: {image_path}")
 
-    t_start = time.perf_counter()
+    start_time = time.perf_counter()
 
-    # --- Load image ---
-    bgr = cv2.imread(image_path)
-    if bgr is None:
-        raise ValueError(f"cv2.imread failed to load image: {image_path}")
-    img_rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    img_bgr = cv2.imread(image_path)
+    if img_bgr is None:
+        raise ValueError(f"Image could not be loaded: {image_path}")
 
-    # --- Stain normalization ---
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+
+    # Keep the existing optional backend feature; it remains off by default.
     if apply_stain_normalization:
         try:
             img_rgb = _normalizer.normalize(img_rgb)
             logger.debug("Macenko stain normalization applied.")
         except Exception as exc:
-            logger.warning("Stain normalization failed (%s) — using raw image.", exc)
+            logger.warning(
+                "Stain normalization failed (%s) - using raw image.", exc
+            )
 
-    # --- Stage 1: Segmentation ---
-    logger.debug("Running U-Net segmentation …")
+    logger.info("Running U-Net segmentation...")
     binary_mask = _predict_segmentation(img_rgb)
 
-    # --- Stage 2: Instance separation ---
-    logger.debug("Running Watershed separation …")
+    logger.info("Running watershed separation...")
     _, nuclei = _separate_nuclei(img_rgb, binary_mask)
-    logger.debug("Detected %d nucleus candidates.", len(nuclei))
 
-    # --- Stage 3: Classification ---
-    logger.debug("Running CNN classifier …")
+    logger.info("Classifying %d nuclei...", len(nuclei))
     class_ids = _classify_nuclei(nuclei)
 
-    # --- Aggregate counts ---
-    counts = {cls_id: 0 for cls_id in range(5)}
-    for cls_id in class_ids:
-        counts[cls_id] = counts.get(cls_id, 0) + 1
+    prediction_counts = Counter(class_ids)
+    counts = {
+        class_id: prediction_counts.get(class_id, 0)
+        for class_id in range(5)
+    }
 
-    # --- Build nucleus details list ---
+    logger.info(
+        "Classifier class distribution: %s",
+        {
+            CLASS_NAMES[class_id]: counts[class_id]
+            for class_id in range(5)
+        },
+    )
+
     nuclei_details = [
         {
-            "bbox":       nucleus["bbox"],
-            "class_id":   cls_id,
-            "class_name": CLASS_NAMES.get(cls_id, "Unknown"),
+            "bbox": nucleus["bbox"],
+            "class_id": class_id,
+            "class_name": CLASS_NAMES[class_id],
+            "area": nucleus["area"],
         }
-        for nucleus, cls_id in zip(nuclei, class_ids)
+        for nucleus, class_id in zip(nuclei, class_ids)
     ]
 
-    # --- Overlay image ---
     overlay = _draw_overlay(img_rgb, nuclei, class_ids)
 
-    # --- Optional saves ---
     if save_overlay_path:
-        os.makedirs(os.path.dirname(save_overlay_path), exist_ok=True)
-        cv2.imwrite(save_overlay_path, cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR))
+        overlay_dir = os.path.dirname(save_overlay_path)
+        if overlay_dir:
+            os.makedirs(overlay_dir, exist_ok=True)
+        cv2.imwrite(
+            save_overlay_path,
+            cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR),
+        )
         logger.info("Overlay saved to %s", save_overlay_path)
 
     if save_mask_path:
-        os.makedirs(os.path.dirname(save_mask_path), exist_ok=True)
-        cv2.imwrite(save_mask_path, (binary_mask * 255).astype(np.uint8))
+        mask_dir = os.path.dirname(save_mask_path)
+        if mask_dir:
+            os.makedirs(mask_dir, exist_ok=True)
+        cv2.imwrite(
+            save_mask_path,
+            (binary_mask * 255).astype(np.uint8),
+        )
         logger.info("Mask saved to %s", save_mask_path)
 
-    elapsed = time.perf_counter() - t_start
-    logger.info("Inference complete in %.2f s — %d nuclei found.", elapsed, len(nuclei))
+    elapsed = time.perf_counter() - start_time
+    total_nuclei = len(class_ids)
+
+    logger.info(
+        "Inference complete in %.2f s - %d nuclei found.",
+        elapsed,
+        total_nuclei,
+    )
 
     return {
-        "overlay_image":       overlay,
-        "mask_image":          binary_mask,
-        "total_nuclei":        len(nuclei),
-        "malignant_count":     counts[3],
-        "inflammatory_count":  counts[1],
-        "healthy_count":       counts[2],
-        "stromal_count":       counts[4],
-        "other_count":         counts[0],
-        "nuclei_details":      nuclei_details,
+        "overlay_image": overlay,
+        "mask_image": binary_mask,
+        "total_nuclei": total_nuclei,
+        "malignant_count": counts[3],
+        "inflammatory_count": counts[1],
+        "healthy_count": counts[2],
+        "stromal_count": counts[4],
+        "other_count": counts[0],
+        "nuclei_details": nuclei_details,
         "processing_time_sec": round(elapsed, 2),
     }
