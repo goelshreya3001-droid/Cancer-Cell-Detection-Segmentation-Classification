@@ -127,6 +127,23 @@ function validateEmail(email) {
     // RFC-5322 simplified, good enough for frontend gating
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+function formatISTDate(dateString, includeTime) {
+    if (!dateString) return "–";
+
+    // SQLite CURRENT_TIMESTAMP is stored in UTC
+    var utcDate = new Date(dateString.replace(" ", "T") + "Z");
+
+    return utcDate.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        month: includeTime ? "short" : "long",
+        day: "numeric",
+        year: "numeric",
+        ...(includeTime ? {
+            hour: "2-digit",
+            minute: "2-digit"
+        } : {})
+    });
+}
 
 
 /* ================================================================
@@ -322,9 +339,10 @@ function initDashboard() {
             analyses.slice(0, 5).forEach(function (a) {
                 var div = document.createElement("div");
                 div.className = "recent-item";
-                var date = a.created_at
-                    ? new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
-                    : "Unknown date";
+                // var date = a.created_at
+                //     ? new Date(a.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+                //     : "Unknown date";
+                var date = formatISTDate(a.created_at, false);
                 var pct = a.total_nuclei > 0
                     ? Math.round((a.malignant_count / a.total_nuclei) * 100)
                     : 0;
@@ -534,12 +552,13 @@ function initHistory() {
             tbody.innerHTML = "";
             analyses.forEach(function (a) {
                 var tr = document.createElement("tr");
-                var date = a.created_at
-                    ? new Date(a.created_at).toLocaleString(undefined, {
-                        month: "short", day: "numeric", year: "numeric",
-                        hour: "2-digit", minute: "2-digit"
-                      })
-                    : "–";
+                // var date = a.created_at
+                //     ? new Date(a.created_at).toLocaleString(undefined, {
+                //         month: "short", day: "numeric", year: "numeric",
+                //         hour: "2-digit", minute: "2-digit"
+                //       })
+                //     : "–";
+                var date = formatISTDate(a.created_at, true);
                 tr.innerHTML =
                     '<td>' + date + '</td>' +
                     '<td class="filename-cell" title="' + escapeHtml(a.original_filename) + '">' +
@@ -577,10 +596,11 @@ function initProfile() {
 
             setText("profileUsername", data.username || "–");
             setText("profileEmail",    data.email || "Not provided");
-            setText("profileCreated",  data.created_at
-                ? new Date(data.created_at).toLocaleDateString(undefined,
-                    { month: "long", day: "numeric", year: "numeric" })
-                : "–");
+            // setText("profileCreated",  data.created_at
+            //     ? new Date(data.created_at).toLocaleDateString(undefined,
+            //         { month: "long", day: "numeric", year: "numeric" })
+            //     : "–");
+            setText("profileCreated", formatISTDate(data.created_at, false));
             if (infoEl) infoEl.classList.remove("hidden");
         })
         .catch(function () {
